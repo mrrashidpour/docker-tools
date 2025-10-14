@@ -1,7 +1,7 @@
 /dragonfly
 /redis
 /redis_insight_data
-/postgres
+/postgres/data
 /kafka
 
 

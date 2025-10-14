@@ -31,7 +31,41 @@ services:
       - ./postgres/init/write:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
-  # DragonFly Shard 1
+  # PgBouncer for Read Database (با auth_type = trust)
+  pgbouncer-read:
+    image: pgbouncer/pgbouncer
+    container_name: pgbouncer-read
+    environment:
+      - DATABASES=myapp_read=host=postgres-read port=5432 dbname=myapp_read
+      - PGBOUNCER_POOL_MODE=transaction
+      - PGBOUNCER_AUTH_TYPE=trust  # تغییر به trust
+      - PGBOUNCER_MAX_CLIENT_CONN=100
+      - PGBOUNCER_DEFAULT_POOL_SIZE=20
+      - PGBOUNCER_ADMIN_USERS=admin
+    ports:
+      - "6433:6432"
+    depends_on:
+      - postgres-read
+    restart: unless-stopped
+
+  # PgBouncer for Write Database (با auth_type = trust)
+  pgbouncer-write:
+    image: pgbouncer/pgbouncer
+    container_name: pgbouncer-write
+    environment:
+      - DATABASES=myapp_write=host=postgres-write port=5432 dbname=myapp_write
+      - PGBOUNCER_POOL_MODE=transaction
+      - PGBOUNCER_AUTH_TYPE=trust  # تغییر به trust
+      - PGBOUNCER_MAX_CLIENT_CONN=100
+      - PGBOUNCER_DEFAULT_POOL_SIZE=20
+      - PGBOUNCER_ADMIN_USERS=admin
+    ports:
+      - "7433:6432"
+    depends_on:
+      - postgres-write
+    restart: unless-stopped
+
+# dragonfly
   dragonfly-1:
     image: docker.dragonflydb.io/dragonflydb/dragonfly
     container_name: dragonfly-1
@@ -42,7 +76,6 @@ services:
     command: [ "--dir", "/data" ]
     restart: unless-stopped
 
-  # DragonFly Shard 2
   dragonfly-2:
     image: docker.dragonflydb.io/dragonflydb/dragonfly
     container_name: dragonfly-2
@@ -53,7 +86,6 @@ services:
     command: [ "--dir", "/data" ]
     restart: unless-stopped
 
-  # DragonFly Shard 3
   dragonfly-3:
     image: docker.dragonflydb.io/dragonflydb/dragonfly
     container_name: dragonfly-3
@@ -64,8 +96,6 @@ services:
     command: [ "--dir", "/data" ]
     restart: unless-stopped
 
-
-  # Redis
   redis:
     container_name: redis-local
     image: redis:7
@@ -75,7 +105,6 @@ services:
       - ./redis:/data
     command: bash -c 'redis-server --requirepass KkWSa7RCJ0eK9SIAHzrQaw'
 
-  # Redis Insight
   redis_insight:
     container_name: redis_insight-local
     image: redis/redisinsight:latest
@@ -84,8 +113,6 @@ services:
     volumes:
       - ./redis_insight_data:/db
 
-
-  # Kafka with KRaft
   kafka:
     image: apache/kafka:3.7.0
     container_name: kafka
@@ -108,13 +135,12 @@ services:
       - ./kafka/data:/tmp/kafka-logs
     restart: unless-stopped
 
-  # HAProxy for Testing
   haproxy:
     image: haproxy:2.8
     container_name: haproxy-test
     ports:
-      - "8888:8888"  # Stats page
-      - "9080:8080"  # Load balancer port
+      - "8888:8888"
+      - "9080:8080"
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     restart: unless-stopped
