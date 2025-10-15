@@ -1,68 +1,36 @@
 services:
   # PostgreSQL Read (6432)
-  postgres-read:
+  postgres:
     image: postgres:17
-    container_name: postgres-read-17
+    container_name: postgresSQL
     environment:
-      POSTGRES_DB: myapp_read
+      POSTGRES_DB: myapp
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password123
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     ports:
       - "6432:5432"
     volumes:
-      - ./postgres/data/read:/var/lib/postgresql/data
-      - ./postgres/init/read:/docker-entrypoint-initdb.d
+      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
-  # PostgreSQL Write (7432)
-  postgres-write:
-    image: postgres:17
-    container_name: postgres-write-17
-    environment:
-      POSTGRES_DB: myapp_write
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    ports:
-      - "7432:5432"
-    volumes:
-      - ./postgres/data/write:/var/lib/postgresql/data
-      - ./postgres/init/write:/docker-entrypoint-initdb.d
-    restart: unless-stopped
 
-  # PgBouncer for Read Database (با auth_type = trust)
-  pgbouncer-read:
+  # PgBouncer  Database (با auth_type = trust)
+  pgbouncer:
     image: pgbouncer/pgbouncer
-    container_name: pgbouncer-read
+    container_name: pgbouncer
     environment:
-      - DATABASES=myapp_read=host=postgres-read port=5432 dbname=myapp_read
+      - DATABASES=myapp=host=postgres port=5432 dbname=myapp
       - PGBOUNCER_POOL_MODE=transaction
-      - PGBOUNCER_AUTH_TYPE=trust  # تغییر به trust
+      - PGBOUNCER_AUTH_TYPE=trust
       - PGBOUNCER_MAX_CLIENT_CONN=100
       - PGBOUNCER_DEFAULT_POOL_SIZE=20
       - PGBOUNCER_ADMIN_USERS=admin
     ports:
       - "6433:6432"
     depends_on:
-      - postgres-read
-    restart: unless-stopped
-
-  # PgBouncer for Write Database (با auth_type = trust)
-  pgbouncer-write:
-    image: pgbouncer/pgbouncer
-    container_name: pgbouncer-write
-    environment:
-      - DATABASES=myapp_write=host=postgres-write port=5432 dbname=myapp_write
-      - PGBOUNCER_POOL_MODE=transaction
-      - PGBOUNCER_AUTH_TYPE=trust  # تغییر به trust
-      - PGBOUNCER_MAX_CLIENT_CONN=100
-      - PGBOUNCER_DEFAULT_POOL_SIZE=20
-      - PGBOUNCER_ADMIN_USERS=admin
-    ports:
-      - "7433:6432"
-    depends_on:
-      - postgres-write
+      - postgres
     restart: unless-stopped
 
 # dragonfly
@@ -97,7 +65,7 @@ services:
     restart: unless-stopped
 
   redis:
-    container_name: redis-local
+    container_name: redis
     image: redis:7
     ports:
       - "6379:6379"
@@ -106,7 +74,7 @@ services:
     command: bash -c 'redis-server --requirepass KkWSa7RCJ0eK9SIAHzrQaw'
 
   redis_insight:
-    container_name: redis_insight-local
+    container_name: redis_insight
     image: redis/redisinsight:latest
     ports:
       - "5300:5540"
@@ -145,5 +113,4 @@ services:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     restart: unless-stopped
     depends_on:
-      - postgres-read
-      - postgres-write
+      - postgres
